@@ -1,5 +1,6 @@
 ﻿using HtmlAgilityPack;
 using HTMLQuestPDF.Extensions;
+using HTMLQuestPDF.Utils;
 using HTMLToQPDF.Components;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
@@ -35,7 +36,32 @@ namespace HTMLQuestPDF.Components
 
         protected virtual IContainer ApplyStyles(IContainer container)
         {
-            return args.ContainerStyles.TryGetValue(node.Name.ToLower(), out var style) ? style(container) : container;
+            // Apply predefined styles based on element tag name
+            container = args.ContainerStyles.TryGetValue(node.Name.ToLower(), out var style) ? style(container) : container;
+
+            // Apply inline styles from the style attribute
+            container = ApplyInlineStyles(container);
+
+            return container;
+        }
+
+        protected virtual IContainer ApplyInlineStyles(IContainer container)
+        {
+            // Parse and apply text-align from inline styles
+            var textAlign = StyleUtils.GetTextAlign(node);
+            if (!string.IsNullOrEmpty(textAlign))
+            {
+                container = textAlign.ToLower() switch
+                {
+                    "left" => container.AlignLeft(),
+                    "center" => container.AlignCenter(),
+                    "right" => container.AlignRight(),
+                    "justify" => container.AlignLeft(), // QuestPDF doesn't have direct justify support, using left
+                    _ => container
+                };
+            }
+
+            return container;
         }
 
         protected virtual void ComposeSingle(IContainer container)
